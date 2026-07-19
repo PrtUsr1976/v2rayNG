@@ -15,4 +15,3 @@ data class SubscriptionItem(
     var userAgent: String? = null,
     var requestHeaders: String? = null,
 )
-

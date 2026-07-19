@@ -3,6 +3,7 @@ package com.v2ray.ang.handler
 import android.content.Context
 import android.graphics.Bitmap
 import android.text.TextUtils
+import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.core.CoreConfigManager
@@ -22,6 +23,7 @@ import com.v2ray.ang.fmt.V2rayNFmt
 import com.v2ray.ang.fmt.VlessFmt
 import com.v2ray.ang.fmt.VmessFmt
 import com.v2ray.ang.fmt.WireguardFmt
+import com.v2ray.ang.util.AgentVConfig
 import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
@@ -557,7 +559,22 @@ object AngConfigManager {
             }
             LogUtil.i(AppConfig.TAG, url)
             val userAgent = it.subscription.userAgent
-            val requestHeaders = it.subscription.requestHeaders
+            val requestHeaders = try {
+                val headers = JsonUtil.parseHeadersToMap(it.subscription.requestHeaders).toMutableMap()
+                MmkvManager.decodeSettingsString(AppConfig.PREF_AGENT_V_URI)
+                    ?.takeIf(String::isNotBlank)?.let { agentVUri ->
+                    headers.putAll(
+                        AgentVConfig.read(
+                            AngApplication.application.contentResolver,
+                            agentVUri
+                        )
+                    )
+                }
+                JsonUtil.toJson(headers)
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Unable to read global agent_v", e)
+                return SubscriptionUpdateResult(failureCount = 1)
+            }
             val proxyUsername = SettingsManager.getSocksUsername()
             val proxyPassword = SettingsManager.getSocksPassword()
 
