@@ -2,6 +2,7 @@ package com.v2ray.ang.ui
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppDivider
@@ -47,15 +49,47 @@ import com.v2ray.ang.compose.ReorderableListItem
 import com.v2ray.ang.compose.colorFabActive
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.extension.toast
+import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
 import com.v2ray.ang.viewmodel.SubscriptionsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 class SubSettingActivity : BaseComponentActivity() {
     private val viewModel: SubscriptionsViewModel by viewModels()
+    private val importSubscriptionsLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            lifecycleScope.launch {
+                val content = withContext(Dispatchers.IO) {
+                    runCatching {
+                        contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    }.getOrNull()
+                }
+                if (content == null) {
+                    toastError(R.string.import_subscription_file_read_error)
+                    return@launch
+                }
+
+                val result = viewModel.importFromText(content)
+                if (result.entries.isEmpty()) {
+                    toastError(R.string.import_subscription_file_no_links)
+                } else {
+                    toast(
+                        getString(
+                            R.string.import_subscription_file_result,
+                            result.entries.size,
+                            result.skippedCount
+                        )
+                    )
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +103,11 @@ class SubSettingActivity : BaseComponentActivity() {
             isLoading = isLoading,
             onBackClick = { finish() },
             onAddClick = { startActivity(Intent(this, SubEditActivity::class.java)) },
+            onImportClick = {
+                importSubscriptionsLauncher.launch(
+                    arrayOf("text/plain", "text/*", "application/octet-stream")
+                )
+            },
             onSubUpdate = { viewModel.updateSubscriptions() },
             onEditSub = { subId ->
                 startActivity(Intent(this, SubEditActivity::class.java).putExtra("subId", subId))
@@ -100,6 +139,7 @@ fun SubSettingScreen(
     isLoading: Boolean,
     onBackClick: () -> Unit,
     onAddClick: () -> Unit,
+    onImportClick: () -> Unit,
     onSubUpdate: () -> Unit,
     onEditSub: (String) -> Unit,
     onRemoveSub: (String) -> Unit,
@@ -129,6 +169,12 @@ fun SubSettingScreen(
                 actions = {
                     IconButton(onClick = onAddClick) {
                         Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.menu_item_add_config))
+                    }
+                    IconButton(onClick = onImportClick) {
+                        Icon(
+                            painterResource(R.drawable.ic_file_24dp),
+                            contentDescription = stringResource(R.string.import_subscription_file)
+                        )
                     }
                     IconButton(onClick = onSubUpdate) {
                         Icon(painterResource(R.drawable.ic_restore_24dp), contentDescription = stringResource(R.string.title_sub_update))
