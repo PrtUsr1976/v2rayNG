@@ -7,6 +7,8 @@ import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.util.SubscriptionImportParseResult
+import com.v2ray.ang.util.SubscriptionListImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +58,28 @@ class SubscriptionsViewModel : BaseViewModel() {
             SettingsChangeManager.makeSetupGroupTab()
             _subsFlow.value = subscriptions.toList()
         }
+    }
+
+    fun importFromText(content: String): SubscriptionImportParseResult {
+        val result = SubscriptionListImporter.parse(
+            content = content,
+            existingRemarks = subscriptions.map { it.subscription.remarks }
+        )
+        result.entries.forEach { entry ->
+            MmkvManager.encodeSubscription(
+                "",
+                SubscriptionItem(
+                    remarks = entry.remarks,
+                    url = entry.url,
+                    allowInsecureUrl = entry.allowInsecureUrl,
+                )
+            )
+        }
+        if (result.entries.isNotEmpty()) {
+            SettingsChangeManager.makeSetupGroupTab()
+            reload()
+        }
+        return result
     }
 
     fun updateSubscriptions() {
