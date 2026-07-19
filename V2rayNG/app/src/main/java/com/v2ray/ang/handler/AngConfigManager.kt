@@ -561,7 +561,8 @@ object AngConfigManager {
             val userAgent = it.subscription.userAgent
             val requestHeaders = try {
                 val headers = JsonUtil.parseHeadersToMap(it.subscription.requestHeaders).toMutableMap()
-                it.subscription.agentVUri?.takeIf(String::isNotBlank)?.let { agentVUri ->
+                MmkvManager.decodeSettingsString(AppConfig.PREF_AGENT_V_URI)
+                    ?.takeIf(String::isNotBlank)?.let { agentVUri ->
                     headers.putAll(
                         AgentVConfig.read(
                             AngApplication.application.contentResolver,
@@ -571,7 +572,7 @@ object AngConfigManager {
                 }
                 JsonUtil.toJson(headers)
             } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "Unable to read agent_v for ${it.subscription.remarks}", e)
+                LogUtil.e(AppConfig.TAG, "Unable to read global agent_v", e)
                 return SubscriptionUpdateResult(failureCount = 1)
             }
             val proxyUsername = SettingsManager.getSocksUsername()

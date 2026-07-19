@@ -14,5 +14,4 @@ data class SubscriptionItem(
     var allowInsecureUrl: Boolean = false,
     var userAgent: String? = null,
     var requestHeaders: String? = null,
-    var agentVUri: String? = null,
 )

@@ -310,11 +310,12 @@
     <string name="sub_setting_url">URL (необязательно)</string>
     <string name="sub_setting_user_agent">User Agent</string>
     <string name="sub_setting_request_headers">Заголовки запроса (формат JSON)</string>
-    <string name="sub_setting_agent_v_file">Файл agent_v</string>
-    <string name="sub_setting_agent_v_not_selected">Не выбран; используются ручные заголовки</string>
-    <string name="sub_setting_agent_v_clear">Отключить файл agent_v</string>
-    <string name="sub_setting_agent_v_access_error">Не удалось сохранить доступ к agent_v</string>
-    <string name="sub_setting_agent_v_invalid">Ошибка в agent_v: %1$s</string>
+    <string name="title_subscription_settings">Подписки</string>
+    <string name="setting_agent_v_file">Глобальный файл agent_v</string>
+    <string name="setting_agent_v_not_selected">Не выбран; используются ручные заголовки</string>
+    <string name="setting_agent_v_clear">Отключить файл agent_v</string>
+    <string name="setting_agent_v_access_error">Не удалось сохранить доступ к agent_v</string>
+    <string name="setting_agent_v_invalid">Ошибка в agent_v: %1$s</string>
     <string name="sub_setting_filter">Название фильтра</string>
     <string name="sub_setting_enable">Использовать обновление</string>
     <string name="sub_auto_update">Использовать автообновление</string>

@@ -10,11 +10,11 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.v2ray.ang"
+        applicationId = "com.v2ray.ang.agentv"
         minSdk = 24
         targetSdk = 37
-        versionCode = 737
-        versionName = "2.2.6-agentv1"
+        versionCode = 738
+        versionName = "2.2.6-agentv2"
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
         splits {

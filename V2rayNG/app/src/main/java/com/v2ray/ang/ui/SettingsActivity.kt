@@ -1,6 +1,11 @@
 package com.v2ray.ang.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,8 +19,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -32,12 +40,17 @@ import com.v2ray.ang.compose.SettingsMenuItem
 import com.v2ray.ang.compose.SettingsSwitchItem
 import com.v2ray.ang.compose.ThemeManager
 import com.v2ray.ang.compose.verticalScrollbar
+import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvString
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.root.RootManager
+import com.v2ray.ang.util.AgentVConfig
 import com.v2ray.ang.util.Utils
 import com.v2ray.ang.viewmodel.SettingsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SettingsActivity : BaseComponentActivity() {
 
@@ -131,6 +144,38 @@ fun SettingsScreen(
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
     var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
     var ipApiUrl by rememberMmkvString(AppConfig.PREF_IP_API_URL, "")
+    var agentVUri by rememberMmkvString(AppConfig.PREF_AGENT_V_URI, "")
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val agentVPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val validation = withContext(Dispatchers.IO) {
+                    runCatching { AgentVConfig.read(context.contentResolver, uri.toString()) }
+                }
+                validation.onSuccess {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                        agentVUri = uri.toString()
+                    } catch (_: SecurityException) {
+                        context.toastError(R.string.setting_agent_v_access_error)
+                    }
+                }.onFailure { error ->
+                    context.toastError(
+                        context.getString(
+                            R.string.setting_agent_v_invalid,
+                            error.message ?: error.javaClass.simpleName
+                        )
+                    )
+                }
+            }
+        }
+    }
+    val agentVName = rememberAgentVName(agentVUri)
 
     val isVpn = mode == VPN
     val hevTunEnabled = isVpn && useHevTun
@@ -178,6 +223,19 @@ fun SettingsScreen(
                 .verticalScrollbar(scrollState)
                 .verticalScroll(scrollState)
         ) {
+            PreferenceGroupHeader(title = stringResource(R.string.title_subscription_settings))
+            SettingsMenuItem(
+                title = stringResource(R.string.setting_agent_v_file),
+                subtitle = agentVName ?: stringResource(R.string.setting_agent_v_not_selected),
+                onClick = { agentVPicker.launch(arrayOf("*/*")) }
+            )
+            if (agentVUri.isNotEmpty()) {
+                SettingsMenuItem(
+                    title = stringResource(R.string.setting_agent_v_clear),
+                    onClick = { agentVUri = "" }
+                )
+            }
+
             PreferenceGroupHeader(title = stringResource(R.string.title_ui_settings))
             SettingsSwitchItem(
                 title = stringResource(R.string.title_pref_speed_enabled),
@@ -613,5 +671,25 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun rememberAgentVName(uriString: String): String? {
+    if (uriString.isBlank()) return null
+    val context = LocalContext.current
+    return remember(uriString) {
+        val uri = Uri.parse(uriString)
+        runCatching {
+            context.contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment
     }
 }
