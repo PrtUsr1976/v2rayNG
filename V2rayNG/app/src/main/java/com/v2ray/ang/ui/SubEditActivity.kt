@@ -1,7 +1,12 @@
 package com.v2ray.ang.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.text.TextUtils
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +22,7 @@ import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -32,19 +38,23 @@ import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ConfirmDialog
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.SettingsMenuItem
 import com.v2ray.ang.compose.SettingsSwitchItem
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.toast
+import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SubscriptionUpdater
+import com.v2ray.ang.util.AgentVConfig
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SubEditActivity : BaseComponentActivity() {
     private val editSubId by lazy { intent.getStringExtra("subId").orEmpty() }
@@ -134,6 +144,7 @@ fun SubEditScreen(
     var url by rememberSaveable { mutableStateOf(initial.url.orEmpty()) }
     var userAgent by rememberSaveable { mutableStateOf(initial.userAgent.orEmpty()) }
     var requestHeaders by rememberSaveable { mutableStateOf(initial.requestHeaders.orEmpty()) }
+    var agentVUri by rememberSaveable { mutableStateOf(initial.agentVUri.orEmpty()) }
     var filter by rememberSaveable { mutableStateOf(initial.filter ?: "") }
     var enabled by rememberSaveable { mutableStateOf(initial.enabled) }
     var autoUpdate by rememberSaveable { mutableStateOf(initial.autoUpdate) }
@@ -145,6 +156,36 @@ fun SubEditScreen(
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val agentVPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val validation = withContext(Dispatchers.IO) {
+                    runCatching { AgentVConfig.read(context.contentResolver, uri.toString()) }
+                }
+                validation.onSuccess {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                        agentVUri = uri.toString()
+                    } catch (_: SecurityException) {
+                        context.toastError(R.string.sub_setting_agent_v_access_error)
+                    }
+                }.onFailure { error ->
+                    context.toastError(
+                        context.getString(
+                            R.string.sub_setting_agent_v_invalid,
+                            error.message ?: error.javaClass.simpleName
+                        )
+                    )
+                }
+            }
+        }
+    }
+    val agentVName = rememberAgentVName(agentVUri)
 
     fun buildSubItem(): SubscriptionItem? {
         val subItem = MmkvManager.decodeSubscription(editSubId) ?: SubscriptionItem()
@@ -152,6 +193,7 @@ fun SubEditScreen(
         subItem.url = url
         subItem.userAgent = userAgent
         subItem.requestHeaders = requestHeaders
+        subItem.agentVUri = agentVUri.ifBlank { null }
         subItem.filter = filter
         subItem.enabled = enabled
         subItem.autoUpdate = autoUpdate
@@ -198,6 +240,17 @@ fun SubEditScreen(
             FormTextField(stringResource(R.string.sub_setting_url), url, { url = it })
             FormTextField(stringResource(R.string.sub_setting_user_agent), userAgent, { userAgent = it })
             FormTextField(stringResource(R.string.sub_setting_request_headers), requestHeaders, { requestHeaders = it })
+            SettingsMenuItem(
+                title = stringResource(R.string.sub_setting_agent_v_file),
+                subtitle = agentVName ?: stringResource(R.string.sub_setting_agent_v_not_selected),
+                onClick = { agentVPicker.launch(arrayOf("*/*")) }
+            )
+            if (agentVUri.isNotEmpty()) {
+                SettingsMenuItem(
+                    title = stringResource(R.string.sub_setting_agent_v_clear),
+                    onClick = { agentVUri = "" }
+                )
+            }
             FormTextField(stringResource(R.string.sub_setting_filter), filter, { filter = it })
             SettingsSwitchItem(
                 title = stringResource(R.string.sub_setting_enable),
@@ -248,5 +301,25 @@ fun SubEditScreen(
             onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false }
         )
+    }
+}
+
+@Composable
+private fun rememberAgentVName(uriString: String): String? {
+    if (uriString.isBlank()) return null
+    val context = LocalContext.current
+    return androidx.compose.runtime.remember(uriString) {
+        val uri = Uri.parse(uriString)
+        runCatching {
+            context.contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment
     }
 }
