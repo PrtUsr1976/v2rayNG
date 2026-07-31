@@ -312,10 +312,16 @@
     <string name="sub_setting_request_headers">Заголовки запроса (формат JSON)</string>
     <string name="title_subscription_settings">Подписки</string>
     <string name="setting_agent_v_file">Глобальный файл agent_v</string>
+    <string name="setting_agent_v_enabled">Использовать agent_v</string>
+    <string name="setting_agent_v_enabled_summary">Добавлять заголовки из выбранного файла к запросам подписок</string>
     <string name="setting_agent_v_not_selected">Не выбран; используются ручные заголовки</string>
-    <string name="setting_agent_v_clear">Отключить файл agent_v</string>
     <string name="setting_agent_v_access_error">Не удалось сохранить доступ к agent_v</string>
     <string name="setting_agent_v_invalid">Ошибка в agent_v: %1$s</string>
+    <string name="setting_vless_export_enabled">Экспорт VLESS</string>
+    <string name="setting_vless_export_enabled_summary">Сохранять VLESS-ссылки в текстовые файлы по именам подписок</string>
+    <string name="setting_vless_export_directory">Папка экспорта VLESS</string>
+    <string name="setting_vless_export_directory_not_selected">Папка не выбрана</string>
+    <string name="setting_vless_export_access_error">Не удалось сохранить доступ к папке экспорта</string>
     <string name="sub_setting_filter">Название фильтра</string>
     <string name="sub_setting_enable">Использовать обновление</string>
     <string name="sub_auto_update">Использовать автообновление</string>

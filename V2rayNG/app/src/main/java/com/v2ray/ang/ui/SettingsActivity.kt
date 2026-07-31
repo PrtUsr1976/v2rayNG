@@ -144,7 +144,10 @@ fun SettingsScreen(
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
     var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
     var ipApiUrl by rememberMmkvString(AppConfig.PREF_IP_API_URL, "")
+    var agentVEnabled by rememberMmkvBool(AppConfig.PREF_AGENT_V_ENABLED, true)
     var agentVUri by rememberMmkvString(AppConfig.PREF_AGENT_V_URI, "")
+    var vlessExportEnabled by rememberMmkvBool(AppConfig.PREF_VLESS_EXPORT_ENABLED, false)
+    var vlessExportDirectoryUri by rememberMmkvString(AppConfig.PREF_VLESS_EXPORT_DIRECTORY_URI, "")
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -175,7 +178,21 @@ fun SettingsScreen(
             }
         }
     }
-    val agentVName = rememberAgentVName(agentVUri)
+    val vlessExportDirectoryPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                vlessExportDirectoryUri = uri.toString()
+            } catch (_: SecurityException) {
+                context.toastError(R.string.setting_vless_export_access_error)
+            }
+        }
+    }
+    val agentVName = rememberUriName(agentVUri)
+    val vlessExportDirectoryName = rememberUriName(vlessExportDirectoryUri)
 
     val isVpn = mode == VPN
     val hevTunEnabled = isVpn && useHevTun
@@ -224,17 +241,29 @@ fun SettingsScreen(
                 .verticalScroll(scrollState)
         ) {
             PreferenceGroupHeader(title = stringResource(R.string.title_subscription_settings))
+            SettingsSwitchItem(
+                title = stringResource(R.string.setting_agent_v_enabled),
+                summary = stringResource(R.string.setting_agent_v_enabled_summary),
+                checked = agentVEnabled,
+                onCheckedChange = { agentVEnabled = it }
+            )
             SettingsMenuItem(
                 title = stringResource(R.string.setting_agent_v_file),
                 subtitle = agentVName ?: stringResource(R.string.setting_agent_v_not_selected),
                 onClick = { agentVPicker.launch(arrayOf("*/*")) }
             )
-            if (agentVUri.isNotEmpty()) {
-                SettingsMenuItem(
-                    title = stringResource(R.string.setting_agent_v_clear),
-                    onClick = { agentVUri = "" }
-                )
-            }
+            SettingsSwitchItem(
+                title = stringResource(R.string.setting_vless_export_enabled),
+                summary = stringResource(R.string.setting_vless_export_enabled_summary),
+                checked = vlessExportEnabled,
+                onCheckedChange = { vlessExportEnabled = it }
+            )
+            SettingsMenuItem(
+                title = stringResource(R.string.setting_vless_export_directory),
+                subtitle = vlessExportDirectoryName
+                    ?: stringResource(R.string.setting_vless_export_directory_not_selected),
+                onClick = { vlessExportDirectoryPicker.launch(null) }
+            )
 
             PreferenceGroupHeader(title = stringResource(R.string.title_ui_settings))
             SettingsSwitchItem(
@@ -675,7 +704,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun rememberAgentVName(uriString: String): String? {
+private fun rememberUriName(uriString: String): String? {
     if (uriString.isBlank()) return null
     val context = LocalContext.current
     return remember(uriString) {

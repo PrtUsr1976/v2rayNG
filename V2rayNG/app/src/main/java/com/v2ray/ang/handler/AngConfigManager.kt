@@ -28,6 +28,7 @@ import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.QRCodeDecoder
+import com.v2ray.ang.util.SubscriptionVlessExporter
 import com.v2ray.ang.util.Utils
 import java.net.URI
 
@@ -561,14 +562,16 @@ object AngConfigManager {
             val userAgent = it.subscription.userAgent
             val requestHeaders = try {
                 val headers = JsonUtil.parseHeadersToMap(it.subscription.requestHeaders).toMutableMap()
-                MmkvManager.decodeSettingsString(AppConfig.PREF_AGENT_V_URI)
-                    ?.takeIf(String::isNotBlank)?.let { agentVUri ->
-                    headers.putAll(
-                        AgentVConfig.read(
-                            AngApplication.application.contentResolver,
-                            agentVUri
+                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AGENT_V_ENABLED, true)) {
+                    MmkvManager.decodeSettingsString(AppConfig.PREF_AGENT_V_URI)
+                        ?.takeIf(String::isNotBlank)?.let { agentVUri ->
+                        headers.putAll(
+                            AgentVConfig.read(
+                                AngApplication.application.contentResolver,
+                                agentVUri
+                            )
                         )
-                    )
+                    }
                 }
                 JsonUtil.toJson(headers)
             } catch (e: Exception) {
@@ -618,6 +621,17 @@ object AngConfigManager {
                 it.subscription.lastUpdated = System.currentTimeMillis()
                 MmkvManager.encodeSubscription(it.guid, it.subscription)
                 LogUtil.i(AppConfig.TAG, "Subscription updated: ${it.subscription.remarks}, $count configs")
+                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_VLESS_EXPORT_ENABLED, false)) {
+                    MmkvManager.decodeSettingsString(AppConfig.PREF_VLESS_EXPORT_DIRECTORY_URI)
+                        ?.takeIf(String::isNotBlank)?.let { directoryUri ->
+                        SubscriptionVlessExporter.export(
+                            AngApplication.application.contentResolver,
+                            directoryUri,
+                            it.subscription.remarks,
+                            configText
+                        )
+                    }
+                }
                 return SubscriptionUpdateResult(
                     configCount = count,
                     successCount = 1
