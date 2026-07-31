@@ -10,6 +10,10 @@ if [[ ! -d $NDK_HOME ]]; then
   echo "Android NDK: NDK_HOME not found. please set env \$NDK_HOME"
   exit 1
 fi
+NDK_BUILD="$NDK_HOME/ndk-build"
+if [[ ! -f $NDK_BUILD && -f "$NDK_HOME/ndk-build.cmd" ]]; then
+  NDK_BUILD="$NDK_HOME/ndk-build.cmd"
+fi
 TMPDIR=$(mktemp -d)
 clear_tmp () {
   rm -rf $TMPDIR
@@ -27,7 +31,7 @@ ln -s "$__dir/hev-socks5-tunnel" jni/hev-socks5-tunnel
 #    com.v2ray.ang.service.TProxyService for the VpnService hev tun mode.
 echo 'include $(call all-subdir-makefiles)' > jni/Android.mk
 
-"$NDK_HOME/ndk-build" \
+"$NDK_BUILD" \
     NDK_PROJECT_PATH=. \
     APP_BUILD_SCRIPT=jni/Android.mk \
     "APP_ABI=$ABIS" \
@@ -80,7 +84,7 @@ LOCAL_LDFLAGS += -Wl,-z,common-page-size=16384
 include $(BUILD_EXECUTABLE)
 EXECMK
 
-"$NDK_HOME/ndk-build" \
+"$NDK_BUILD" \
     NDK_PROJECT_PATH=. \
     APP_BUILD_SCRIPT=jni/exec.mk \
     "APP_ABI=$ABIS" \

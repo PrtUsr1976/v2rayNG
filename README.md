@@ -1,90 +1,188 @@
-# v2rayNG
+# v2RayNG-alex
 
-A V2Ray client for Android, support [Xray core](https://github.com/XTLS/Xray-core) and [v2fly core](https://github.com/v2fly/v2ray-core)
+Русский | [English](#english)
 
-[![API](https://img.shields.io/badge/API-24%2B-yellow.svg?style=flat)](https://developer.android.com/about/versions/lollipop)
-[![Kotlin Version](https://img.shields.io/badge/Kotlin-2.4.0-blue.svg)](https://kotlinlang.org)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/2dust/v2rayNG)](https://github.com/2dust/v2rayNG/commits/master)
-[![CodeFactor](https://www.codefactor.io/repository/github/2dust/v2rayng/badge)](https://www.codefactor.io/repository/github/2dust/v2rayng)
-[![GitHub Releases](https://img.shields.io/github/downloads/2dust/v2rayNG/latest/total?logo=github)](https://github.com/2dust/v2rayNG/releases)
-[![Chat on Telegram](https://img.shields.io/badge/Chat%20on-Telegram-brightgreen.svg)](https://t.me/v2rayn)
+Android-клиент на базе [v2rayNG](https://github.com/2dust/v2rayNG) с поддержкой [Xray-core](https://github.com/XTLS/Xray-core) и [v2fly-core](https://github.com/v2fly/v2ray-core).
 
----
+[![API](https://img.shields.io/badge/API-24%2B-yellow.svg?style=flat)](https://developer.android.com/about/versions/nougat)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-blue.svg)](https://kotlinlang.org)
+[![Build APK](https://github.com/PrtUsr1976/v2rayNG/actions/workflows/build.yml/badge.svg)](https://github.com/PrtUsr1976/v2rayNG/actions/workflows/build.yml)
+[![GitHub Releases](https://img.shields.io/github/v/release/PrtUsr1976/v2rayNG?include_prereleases)](https://github.com/PrtUsr1976/v2rayNG/releases)
 
-## Download / 下载
+## Русский
 
-Download the latest release here:
+### Нововведения
 
-在这里下载最新版本：
+- Приложение и версия имеют маркировку `v2RayNG-alex` и `-alex`.
+- В настройках добавлен переключатель **Использовать agent_v**. Выбранный файл сохраняется при выключении функции и снова используется после включения.
+- В настройках добавлен переключатель **Экспорт VLESS** и выбор папки назначения. Выбранная папка также сохраняется при выключении функции.
+- После успешного обновления подписки исходные ссылки `vless://` экспортируются в отдельный текстовый файл с именем подписки.
+- Для Windows добавлены PowerShell-скрипты установки Android SDK, подготовки нативных библиотек, тестирования, сборки, подписи APK и работы с GitHub.
+- GitHub Actions собирает APK для `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` и универсальный APK.
+- Релизные APK подписываются Android-ключом, а опубликованные файлы дополнительно получают отдельные GPG-подписи `.sig`.
 
-[https://github.com/2dust/v2rayNG/releases](https://github.com/2dust/v2rayNG/releases)
+### Загрузка
 
-> [!TIP]
-> v2rayNG is the mobile version. For the desktop version, please visit the v2rayN \
-> v2rayNG 是手机版，电脑版请访问 v2rayN
->
-> https://github.com/2dust/v2rayN
+Готовые сборки доступны на странице [GitHub Releases](https://github.com/PrtUsr1976/v2rayNG/releases).
 
----
+Для Samsung Galaxy A15 используйте вариант `arm64-v8a`. Универсальный APK подходит для большинства устройств, но имеет больший размер.
 
-### Geoip and Geosite
+> Если Android сообщает «Приложение не установлено», на устройстве может находиться приложение с тем же package ID, но другой цифровой подписью. В таком случае сохраните нужные данные, удалите прежнюю версию и установите новую.
 
-- geoip.dat and geosite.dat files are in `Android/data/com.v2ray.ang/files/assets` (path may differ on some Android device)
-- download feature will get enhanced version in this [repo](https://github.com/Loyalsoldier/v2ray-rules-dat) (note: it needs a working proxy)
-- latest official [domain list](https://github.com/Loyalsoldier/v2ray-rules-dat) and [ip list](https://github.com/Loyalsoldier/geoip) can be imported manually
-- possible to use a third-party dat file in the same folder, like [h2y](https://guide.v2fly.org/routing/sitedata.html#%E5%A4%96%E7%BD%AE%E7%9A%84%E5%9F%9F%E5%90%8D%E6%96%87%E4%BB%B6)
+### Настройка agent_v
 
-More in our [wiki](https://github.com/2dust/v2rayNG/wiki)
+1. Откройте настройки подписок.
+2. Выберите глобальный файл `agent_v`.
+3. Управляйте его применением переключателем **Использовать agent_v**.
 
-### Geoip 与 Geosite
+Выключение не удаляет выбранный файл. Заголовки из него применяются только во включённом состоянии.
 
-- geoip.dat 和 geosite.dat 文件位于 `Android/data/com.v2ray.ang/files/assets`（部分设备路径可能不同）
-- 下载功能将获取该 [仓库](https://github.com/Loyalsoldier/v2ray-rules-dat) 中的增强版本（注意：此功能需要一个可用的代理）
-- 最新官方 [域名列表](https://github.com/Loyalsoldier/v2ray-rules-dat) 和 [IP 列表](https://github.com/Loyalsoldier/geoip) 可手动导入
-- 也可在同一文件夹中使用第三方 dat 文件，例如 [h2y](https://guide.v2fly.org/routing/sitedata.html#%E5%A4%96%E7%BD%AE%E7%9A%84%E5%9F%9F%E5%90%8D%E6%96%87%E4%BB%B6)
+### Экспорт VLESS
 
-更多内容请见我们的 [wiki](https://github.com/2dust/v2rayNG/wiki)
+1. Откройте настройки подписок.
+2. Выберите папку для экспорта.
+3. Включите **Экспорт VLESS**.
+4. Обновите подписки.
 
----
+Для каждой успешно обновлённой подписки приложение создаёт или обновляет файл `<имя подписки>.txt`. Ссылки очищаются от повторов и сортируются. Ошибка экспорта не отменяет обновление самой подписки.
 
-## Development guide / 开发指南
+### Сборка в Windows
 
-### Note
+Android SDK и нативные зависимости можно подготовить скриптами из каталога `ps_scripts`:
 
-- Android project under the V2rayNG folder can be compiled directly in Android Studio, or using the Gradle wrapper. But the v2ray core inside the aar is (probably) outdated.
-- The aar can be compiled from the Golang project [AndroidLibV2rayLite](https://github.com/2dust/AndroidLibV2rayLite) or [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite). For a quick start, read the guides for [Go Mobile](https://github.com/golang/go/wiki/Mobile) and [Makefiles for Go Developers](https://tutorialedge.net/golang/makefiles-for-go-developers/).
-- v2rayNG can run on Android Emulators. For WSA, VPN permission needs to be granted via `appops set [package name] ACTIVATE_VPN allow`.
-
-### 提示
-
-- V2rayNG 文件夹下的 Android 项目可直接在 Android Studio 中编译，或使用 Gradle wrapper 编译。但 aar 内置的 v2ray core（可能）已过时。
-- aar 可由 Golang 项目 [AndroidLibV2rayLite](https://github.com/2dust/AndroidLibV2rayLite) 或 [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite) 编译而成。快速入门可参考 [Go Mobile](https://github.com/golang/go/wiki/Mobile) 指南和 [Makefiles for Go Developers](https://tutorialedge.net/golang/makefiles-for-go-developers/)。
-- v2rayNG 可在 Android 模拟器上运行。对于 WSA，需要通过 `appops set [package name] ACTIVATE_VPN allow` 授予 VPN 权限。
-
----
-
-
-## GPG Verification / GPG 签名校验
-
-Release files are signed with GPG to verify authenticity and integrity, helping prevent mirror, ISP, or CDN hijacking.
-
-发布文件已使用 GPG 签名，可用于校验文件真实性与完整性，预防镜像站、运营商或 CDN 劫持。
-
-### Fingerprint / 公钥指纹
-
-```text
-7694 5E9F 3E9A 168F 8070 F195 805D 661C
-134D FAF6 8903 C199 463C 31E5 AE90 3AE0
+```powershell
+.\ps_scripts\Install-AndroidSdk.ps1
+.\ps_scripts\Build-NativeDependencies.ps1
+.\ps_scripts\Test-VlessExport.ps1
+.\ps_scripts\Build-SamsungA15.ps1
 ```
 
----
+Подписанный APK для Samsung Galaxy A15 копируется в:
 
-## Community / 社区
+```text
+!binout\v2rayNG_2.2.6-alex_arm64-v8a.apk
+```
 
-Telegram Group / Telegram 群组：
+Локальный ключ подписи хранится в `.local-signing` и исключён из Git.
 
-[https://t.me/v2rayN](https://t.me/v2rayN)
+Основные вспомогательные команды:
 
-Telegram Channel / Telegram 频道：
+```powershell
+.\ps_scripts\Read-RepositoryFiles.ps1 -Path 'README.md'
+.\ps_scripts\Git-Status.ps1
+.\ps_scripts\Save-GitHub.ps1 -CommitMessage 'Описание изменений' -OpenPullRequest
+.\ps_scripts\Start-GitHubBuild.ps1 -Branch agent/alex-vless-export
+```
 
-[https://t.me/github_2dust](https://t.me/github_2dust)
+### GeoIP и GeoSite
+
+- Файлы `geoip.dat` и `geosite.dat` располагаются в `Android/data/com.v2ray.ang.agentv/files/assets`; на некоторых устройствах путь может отличаться.
+- Расширенные наборы правил доступны в [v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat) и [geoip](https://github.com/Loyalsoldier/geoip).
+- Файлы DAT можно импортировать вручную.
+
+### Проверка GPG-подписи
+
+В релизе рядом с APK публикуются файл `<имя APK>.sig` и публичный ключ. Отпечаток ключа `v2RayNG-alex Release`:
+
+```text
+7B78 5CA6 ABE0 9726 D4A9 0950 F0CA 1079 4263 DE8B
+```
+
+Пример проверки:
+
+```bash
+gpg --import v2rayN-public-key.asc
+gpg --verify application.apk.sig application.apk
+```
+
+## English
+
+Android client based on [v2rayNG](https://github.com/2dust/v2rayNG), with support for [Xray-core](https://github.com/XTLS/Xray-core) and [v2fly-core](https://github.com/v2fly/v2ray-core).
+
+### What's new
+
+- The application is branded as `v2RayNG-alex`, and its version suffix is `-alex`.
+- Subscription settings include a **Use agent_v** switch. Disabling it does not forget the selected file.
+- Subscription settings include an **Export VLESS** switch and an export-directory picker. Disabling export does not forget the selected directory.
+- After a successful subscription update, original `vless://` links are exported to a text file named after the subscription.
+- Windows PowerShell scripts cover Android SDK installation, native dependency preparation, tests, APK builds, signing, and GitHub operations.
+- GitHub Actions builds `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`, and universal APKs.
+- Release APKs use Android signing; published files also receive detached GPG `.sig` signatures.
+
+### Download
+
+Builds are available on the [GitHub Releases](https://github.com/PrtUsr1976/v2rayNG/releases) page.
+
+Use the `arm64-v8a` build for a Samsung Galaxy A15. The universal APK works on most supported devices but is larger.
+
+> If Android reports “App not installed,” another application with the same package ID but a different signing certificate may already be installed. Back up any required data, uninstall the old application, and install the new APK.
+
+### agent_v settings
+
+1. Open the subscription settings.
+2. Select the global `agent_v` file.
+3. Control its use with the **Use agent_v** switch.
+
+Turning the switch off does not clear the selected file. Its headers are applied only while the switch is enabled.
+
+### VLESS export
+
+1. Open the subscription settings.
+2. Select an export directory.
+3. Enable **Export VLESS**.
+4. Update subscriptions.
+
+For each successfully updated subscription, the application creates or updates `<subscription name>.txt`. Links are deduplicated and sorted. An export error does not cancel the subscription update.
+
+### Building on Windows
+
+Use the scripts in `ps_scripts` to install the Android SDK, prepare native dependencies, run tests, and build the app:
+
+```powershell
+.\ps_scripts\Install-AndroidSdk.ps1
+.\ps_scripts\Build-NativeDependencies.ps1
+.\ps_scripts\Test-VlessExport.ps1
+.\ps_scripts\Build-SamsungA15.ps1
+```
+
+The signed Samsung Galaxy A15 APK is copied to:
+
+```text
+!binout\v2rayNG_2.2.6-alex_arm64-v8a.apk
+```
+
+The local signing key is stored in `.local-signing`, which is excluded from Git.
+
+Useful repository commands:
+
+```powershell
+.\ps_scripts\Read-RepositoryFiles.ps1 -Path 'README.md'
+.\ps_scripts\Git-Status.ps1
+.\ps_scripts\Save-GitHub.ps1 -CommitMessage 'Describe the changes' -OpenPullRequest
+.\ps_scripts\Start-GitHubBuild.ps1 -Branch agent/alex-vless-export
+```
+
+### GeoIP and GeoSite
+
+- `geoip.dat` and `geosite.dat` are stored in `Android/data/com.v2ray.ang.agentv/files/assets`; the path may differ on some devices.
+- Enhanced rule sets are available from [v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat) and [geoip](https://github.com/Loyalsoldier/geoip).
+- DAT files can also be imported manually.
+
+### GPG verification
+
+Each release provides `<APK name>.sig` and the public key alongside the APK files. The `v2RayNG-alex Release` key fingerprint is:
+
+```text
+7B78 5CA6 ABE0 9726 D4A9 0950 F0CA 1079 4263 DE8B
+```
+
+Verification example:
+
+```bash
+gpg --import v2rayN-public-key.asc
+gpg --verify application.apk.sig application.apk
+```
+
+## Credits and license
+
+This project is derived from [2dust/v2rayNG](https://github.com/2dust/v2rayNG). See [LICENSE](LICENSE) for licensing information.
