@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 if ([string]::IsNullOrWhiteSpace($Description)) {
-    $EncodedDescription = 'djJSYXlORy1hbGV4IOKAlCBBbmRyb2lkLdC60LvQuNC10L3RgiBWMlJheS9YcmF5OiBhZ2VudF92LCDRjdC60YHQv9C+0YDRgiBWTEVTUywg0L/QvtC00L/QuNGB0LDQvdC90YvQtSBtdWx0aS1BQkkgQVBLINC4IFBvd2VyU2hlbGwt0YHQutGA0LjQv9GC0YsuIEFuZHJvaWQgVjJSYXkvWHJheSBjbGllbnQgd2l0aCBWTEVTUyBleHBvcnQu'
+    $EncodedDescription = 'djJSYXlORy1hbGV4IOKAlCBVc2VyLUFnZW50INC4IEhXSUQsINC40LzQv9C+0YDRgiDQv9C+0LTQv9C40YHQvtC6INC40Lcg0YTQsNC50LvQsCwg0Y3QutGB0L/QvtGA0YIg0LrQvtC90YTQuNCz0YPRgNCw0YbQuNC5INCyINGE0LDQudC7LiBVc2VyLUFnZW50ICYgSFdJRCwgc3Vic2NyaXB0aW9uIGltcG9ydCBhbmQgY29uZmlndXJhdGlvbiBleHBvcnQgdmlhIGZpbGVzLg=='
     $Description = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($EncodedDescription))
 }
 
