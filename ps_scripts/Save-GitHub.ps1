@@ -26,7 +26,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Unable to configure the GitHub noreply email.' }
     }
 
-    & git add -- .gitignore README.md V2rayNG compile-hevtun.sh ps_scripts
+    & git add -- .gitignore .github README.md V2rayNG compile-hevtun.sh ps_scripts
     if ($LASTEXITCODE -ne 0) { throw "git add failed: $LASTEXITCODE" }
     & git diff --cached --check
     if ($LASTEXITCODE -ne 0) { throw 'Staged changes contain whitespace errors.' }
