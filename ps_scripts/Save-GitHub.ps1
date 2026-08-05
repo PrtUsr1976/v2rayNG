@@ -46,20 +46,9 @@ try {
     if ($OpenPullRequest) {
         $ExistingPrJson = (& gh pr list --head $Branch --json url --limit 1) -join ""
         if ($ExistingPrJson -eq '[]') {
-            $Body = @"
-## Что изменено
-
-- добавлены переключатели agent_v и экспорта VLESS с сохранением выбранных путей;
-- VLESS-ссылки экспортируются в текстовые файлы по именам подписок;
-- приложение переименовано в v2RayNG-alex;
-- добавлены Windows PowerShell-скрипты для SDK, сборки, тестов, подписи и Git-операций.
-
-## Проверка
-
-- Release APK успешно собран;
-- APK для Samsung Galaxy A15 подписан и проверен схемами v2/v3;
-- целевые тесты экспорта VLESS проходят.
-"@
+            $EncodedBodyTemplate = 'IyMg0JjQt9C80LXQvdC10L3QuNGPIC8gQ2hhbmdlcwoKLSB7MH0KCiMjINCf0YDQvtCy0LXRgNC60LAgLyBWYWxpZGF0aW9uCgotINCY0LfQvNC10L3QtdC90LjRjyDRgdC+0YXRgNCw0L3QtdC90Ysg0LIgR2l0INC4INC+0YLQv9GA0LDQstC70LXQvdGLINCyINCy0LXRgtC60YMgYHsxfWAuCi0g0J/QtdGA0LXQtCDQvtCx0YrQtdC00LjQvdC10L3QuNC10Lwg0L/RgNC+0LLQtdGA0YzRgtC1INGA0LXQt9GD0LvRjNGC0LDRgtGLINGC0LXRgdGC0L7QsiDQuCDRgdCx0L7RgNC60LguCi0gQ2hhbmdlcyB3ZXJlIGNvbW1pdHRlZCBhbmQgcHVzaGVkIHRvIGJyYW5jaCBgezF9YC4KLSBSZXZpZXcgdGVzdCBhbmQgYnVpbGQgcmVzdWx0cyBiZWZvcmUgbWVyZ2luZy4='
+            $BodyTemplate = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($EncodedBodyTemplate))
+            $Body = $BodyTemplate -f $CommitMessage, $Branch
             & gh pr create --draft --base $BaseBranch --head $Branch --title $CommitMessage --body $Body
             if ($LASTEXITCODE -ne 0) { throw "Creating pull request failed: $LASTEXITCODE" }
         }
