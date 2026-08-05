@@ -4,10 +4,18 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.DocumentsContract
 import com.v2ray.ang.AppConfig
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+import java.util.Locale
 
 object SubscriptionVlessExporter {
     private val vlessPattern = Regex("vless://[^\\s\\\"'<>]+", RegexOption.IGNORE_CASE)
     private val invalidFileNameCharacters = Regex("[\\x00-\\x1f\\\\/:*?\\\"<>|]")
+    private val vlessLinkComparator = compareBy<String> {
+        getVlessSortName(it).lowercase(Locale.ROOT)
+    }.thenBy {
+        it.lowercase(Locale.ROOT)
+    }.thenBy { it }
 
     fun export(
         contentResolver: ContentResolver,
@@ -16,7 +24,7 @@ object SubscriptionVlessExporter {
         originalContent: String
     ) {
         try {
-            val links = extractOriginalVlessLinks(originalContent)
+            val links = extractOriginalVlessLinks(originalContent).sortedWith(vlessLinkComparator)
             val treeUri = Uri.parse(directoryUri)
             val fileName = "${getSafeFileName(subscriptionName)}.txt"
             val documentUri = findDocument(contentResolver, treeUri, fileName)
@@ -38,8 +46,16 @@ object SubscriptionVlessExporter {
         return sequenceOf(content, decoded)
             .flatMap { vlessPattern.findAll(it).map(MatchResult::value) }
             .distinct()
-            .sortedWith(String.CASE_INSENSITIVE_ORDER.thenBy { it })
+            .sortedWith(vlessLinkComparator)
             .toList()
+    }
+
+    internal fun getVlessSortName(link: String): String {
+        val fragment = link.substringAfterLast('#', "")
+        if (fragment.isBlank()) return link
+        return runCatching {
+            URLDecoder.decode(fragment.replace("+", "%2B"), StandardCharsets.UTF_8.name())
+        }.getOrDefault(fragment)
     }
 
     fun getSafeFileName(remarks: String?): String {
