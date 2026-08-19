@@ -241,6 +241,7 @@ object AngConfigManager {
             }
             // Find the currently selected server that belongs to the same subscription before replacement.
             val removedSelected = getRemovedSelectedProfile(subid, append)
+            val reusableProfiles = getReusableProfiles(subid, append)
 
             val subItem = MmkvManager.decodeSubscription(subid)
 
@@ -261,7 +262,7 @@ object AngConfigManager {
                 if (!append) {
                     MmkvManager.removeServerViaSubid(subid)
                 }
-                val keyToProfile = batchSaveConfigs(configs, subid)
+                val keyToProfile = batchSaveConfigs(configs, subid, reusableProfiles)
                 val matchKey = findMatchedProfileKey(keyToProfile, removedSelected)
                 matchKey?.let { MmkvManager.setSelectServer(it) }
             }
@@ -281,14 +282,18 @@ object AngConfigManager {
      * @param subid The subscription ID.
      * @return Map of generated keys to their corresponding ProfileItem.
      */
-    private fun batchSaveConfigs(configs: List<ProfileItem>, subid: String): Map<String, ProfileItem> {
+    private fun batchSaveConfigs(
+        configs: List<ProfileItem>,
+        subid: String,
+        reusableProfiles: MutableMap<String, ProfileItem>
+    ): Map<String, ProfileItem> {
         val keyToProfile = mutableMapOf<String, ProfileItem>()
 
         // Read serverList once
         val serverList = MmkvManager.decodeServerList(subid)
 
         configs.forEach { config ->
-            val key = Utils.getUuid()
+            val key = takeReusableProfileKey(reusableProfiles, config) ?: Utils.getUuid()
             // Save profile directly without updating serverList
             MmkvManager.encodeProfileDirect(key, JsonUtil.toJson(config))
 
@@ -315,7 +320,11 @@ object AngConfigManager {
      * @param target Target profile to match
      * @return Matched key or null
      */
-    private fun findMatchedProfileKey(keyToProfile: Map<String, ProfileItem>, target: ProfileItem?): String? {
+    private fun findMatchedProfileKey(
+        keyToProfile: Map<String, ProfileItem>,
+        target: ProfileItem?,
+        fallbackToFirst: Boolean = true
+    ): String? {
         if (keyToProfile.isEmpty()) return null
         if (target == null) return null
 
@@ -355,7 +364,26 @@ object AngConfigManager {
         }?.key?.let { return it }
 
         // If old selected node cannot be matched, fall back to the first imported config.
-        return keyToProfile.keys.firstOrNull()
+        return if (fallbackToFirst) keyToProfile.keys.firstOrNull() else null
+    }
+
+    private fun getReusableProfiles(
+        subid: String,
+        append: Boolean
+    ): MutableMap<String, ProfileItem> {
+        if (subid.isBlank() || append) return mutableMapOf()
+        return MmkvManager.decodeServerList(subid).mapNotNull { guid ->
+            MmkvManager.decodeServerConfig(guid)?.let { guid to it }
+        }.toMap(mutableMapOf())
+    }
+
+    private fun takeReusableProfileKey(
+        reusableProfiles: MutableMap<String, ProfileItem>,
+        target: ProfileItem
+    ): String? {
+        val key = findMatchedProfileKey(reusableProfiles, target, fallbackToFirst = false)
+        if (key != null) reusableProfiles.remove(key)
+        return key
     }
 
     /**
@@ -404,6 +432,7 @@ object AngConfigManager {
 
                 if (serverList.isNotEmpty()) {
                     val removedSelected = getRemovedSelectedProfile(subid, append)
+                    val reusableProfiles = getReusableProfiles(subid, append)
                     if (!append) {
                         MmkvManager.removeServerViaSubid(subid)
                     }
@@ -413,7 +442,8 @@ object AngConfigManager {
                         val config = CustomFmt.parse(JsonUtil.toJson(srv)) ?: continue
                         config.subscriptionId = subid
                         config.description = generateDescription(config)
-                        val key = MmkvManager.encodeServerConfig("", config)
+                        val reusableKey = takeReusableProfileKey(reusableProfiles, config)
+                        val key = MmkvManager.encodeServerConfig(reusableKey.orEmpty(), config)
                         MmkvManager.encodeServerRaw(key, JsonUtil.toJsonPretty(srv) ?: "")
                         keyToProfile[key] = config
                         count += 1
@@ -433,10 +463,12 @@ object AngConfigManager {
                 val config = CustomFmt.parse(server) ?: return 0
                 config.subscriptionId = subid
                 config.description = generateDescription(config)
+                val reusableProfiles = getReusableProfiles(subid, append)
+                val reusableKey = takeReusableProfileKey(reusableProfiles, config)
                 if (!append) {
                     MmkvManager.removeServerViaSubid(subid)
                 }
-                val key = MmkvManager.encodeServerConfig("", config)
+                val key = MmkvManager.encodeServerConfig(reusableKey.orEmpty(), config)
                 MmkvManager.encodeServerRaw(key, server)
                 return 1
             } catch (e: Exception) {
@@ -446,11 +478,14 @@ object AngConfigManager {
         } else if (server.startsWith("[Interface]") && server.contains("[Peer]")) {
             try {
                 val config = WireguardFmt.parseWireguardConfFile(server) ?: return R.string.toast_incorrect_protocol
+                config.subscriptionId = subid
                 config.description = generateDescription(config)
+                val reusableProfiles = getReusableProfiles(subid, append)
+                val reusableKey = takeReusableProfileKey(reusableProfiles, config)
                 if (!append) {
                     MmkvManager.removeServerViaSubid(subid)
                 }
-                val key = MmkvManager.encodeServerConfig("", config)
+                val key = MmkvManager.encodeServerConfig(reusableKey.orEmpty(), config)
                 MmkvManager.encodeServerRaw(key, server)
                 return 1
             } catch (e: Exception) {
