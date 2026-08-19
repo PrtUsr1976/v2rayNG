@@ -26,6 +26,10 @@ if (-not (Test-Path -LiteralPath $GradleWrapper -PathType Leaf)) {
 }
 
 if (-not $SkipBuild) {
+    if (Test-Path -LiteralPath $BuildRoot -PathType Container) {
+        Get-ChildItem -LiteralPath $BuildRoot -Recurse -File -Filter '*.apk' |
+            Remove-Item -Force
+    }
     Set-Location -LiteralPath $AndroidRoot
     $Task = if ($Configuration -eq 'Release') { 'assembleRelease' } else { 'assembleDebug' }
     Write-Host "Building Android $Configuration APKs..."
