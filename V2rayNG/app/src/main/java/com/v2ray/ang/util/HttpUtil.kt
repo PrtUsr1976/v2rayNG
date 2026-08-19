@@ -7,8 +7,12 @@ import com.v2ray.ang.dto.UrlContentRequest
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
+import java.util.zip.GZIPInputStream
+import java.util.zip.InflaterInputStream
+import org.brotli.dec.BrotliInputStream
 import java.net.IDN
 import java.net.Inet6Address
 import java.net.InetAddress
@@ -147,37 +151,53 @@ object HttpUtil {
         var currentUrl = request.url
         var redirects = 0
         val maxRedirects = 3
+        val standardHeaders = linkedMapOf(
+            "User-Agent" to (request.userAgent?.takeIf(String::isNotBlank)
+                ?: "v2rayNG/${BuildConfig.VERSION_NAME}"),
+            "Connection" to "close"
+        )
+        val finalHeaders = AgentVConfig.merge(
+            standardHeaders,
+            JsonUtil.parseHeadersToMap(request.requestHeaders)
+        )
 
         while (redirects++ < maxRedirects) {
             if (currentUrl == null) continue
-            val client = buildOkHttpClient(request.timeout, request.httpPort, request.proxyUsername, request.proxyPassword, followRedirects = false)
-            val finalUserAgent = if (request.userAgent.isNullOrBlank()) {
-                "v2rayNG/${BuildConfig.VERSION_NAME}"
-            } else {
-                request.userAgent
-            }
+            val client = buildOkHttpClient(
+                request.timeout,
+                request.httpPort,
+                request.proxyUsername,
+                request.proxyPassword,
+                followRedirects = false
+            )
             val requestBuilder = Request.Builder()
                 .url(currentUrl)
                 .get()
-                .header("User-agent", finalUserAgent)
-                .header("Connection", "close")
-
-            applyEmbeddedBasicAuthHeader(currentUrl, requestBuilder)
-
-
-            val headersMap = JsonUtil.parseHeadersToMap(request.requestHeaders)
-            for ((key, value) in headersMap) {
+            for ((key, value) in finalHeaders) {
                 try {
                     requestBuilder.header(key, value)
                 } catch (_: IllegalArgumentException) {
                 }
             }
 
+            applyEmbeddedBasicAuthHeader(currentUrl, requestBuilder)
             if (request.httpPort != 0 && !request.proxyUsername.isNullOrBlank() && !request.proxyPassword.isNullOrBlank()) {
                 requestBuilder.header("Proxy-Authorization", Credentials.basic(request.proxyUsername, request.proxyPassword))
             }
 
-            client.newCall(requestBuilder.build()).execute().use { response ->
+            val builtRequest = requestBuilder.build()
+            val sentHeaders = builtRequest.headers.names().associateWith {
+                builtRequest.header(it).orEmpty()
+            }
+            runCatching {
+                LogUtil.i(
+                    AppConfig.TAG,
+                    "Subscription request: ${safeUrl(currentUrl)}, " +
+                        "User-Agent=${builtRequest.header("User-Agent").orEmpty()}, " +
+                        "headers=${maskHeaders(sentHeaders)}"
+                )
+            }
+            client.newCall(builtRequest).execute().use { response ->
                 when {
                     response.isRedirect -> {
                         val location = response.header("Location")
@@ -192,7 +212,7 @@ object HttpUtil {
                     }
 
                     response.isSuccessful -> {
-                        return response.body?.string() ?: ""
+                        return decodeResponseBody(response.header("Content-Encoding"), response.body?.bytes())
                     }
 
                     else -> {
@@ -202,6 +222,42 @@ object HttpUtil {
             }
         }
         throw IOException("Too many redirects")
+    }
+
+    internal fun safeUrl(rawUrl: String): String {
+        return runCatching {
+            val uri = URI(rawUrl)
+            val port = if (uri.port >= 0) ":${uri.port}" else ""
+            "${uri.scheme}://${uri.host}$port"
+        }.getOrDefault("<invalid-url>")
+    }
+
+    internal fun maskHeaders(headers: Map<String, String>): Map<String, String> {
+        return headers.mapValues { (name, value) ->
+            val normalized = name.lowercase()
+            if (normalized == "authorization"
+                || normalized == "proxy-authorization"
+                || normalized == "cookie"
+                || normalized.contains("api-key")
+                || normalized.contains("token")
+                || normalized.contains("secret")
+            ) {
+                "***"
+            } else {
+                value
+            }
+        }
+    }
+
+    private fun decodeResponseBody(contentEncoding: String?, bytes: ByteArray?): String {
+        if (bytes == null) return ""
+        val decoded = when (contentEncoding?.trim()?.lowercase()) {
+            "gzip" -> GZIPInputStream(ByteArrayInputStream(bytes)).use { it.readBytes() }
+            "deflate" -> InflaterInputStream(ByteArrayInputStream(bytes)).use { it.readBytes() }
+            "br" -> BrotliInputStream(ByteArrayInputStream(bytes)).use { it.readBytes() }
+            else -> bytes
+        }
+        return decoded.toString(Charsets.UTF_8)
     }
 
     private fun applyEmbeddedBasicAuthHeader(rawUrl: String, requestBuilder: Request.Builder) {
@@ -228,6 +284,8 @@ object HttpUtil {
         val builder = OkHttpClient.Builder()
             .connectTimeout(timeout.toLong(), TimeUnit.MILLISECONDS)
             .readTimeout(timeout.toLong(), TimeUnit.MILLISECONDS)
+            .writeTimeout(timeout.toLong(), TimeUnit.MILLISECONDS)
+            .callTimeout((timeout.toLong() * 2).coerceAtLeast(1L), TimeUnit.MILLISECONDS)
             .followRedirects(followRedirects)
             .followSslRedirects(followRedirects)
 

@@ -558,19 +558,20 @@ object AngConfigManager {
                     return SubscriptionUpdateResult(failureCount = 1)
                 }
             }
-            LogUtil.i(AppConfig.TAG, url)
+            LogUtil.i(AppConfig.TAG, "Updating subscription: ${HttpUtil.safeUrl(url)}")
             val userAgent = it.subscription.userAgent
             val requestHeaders = try {
                 val headers = JsonUtil.parseHeadersToMap(it.subscription.requestHeaders).toMutableMap()
                 if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AGENT_V_ENABLED, true)) {
                     MmkvManager.decodeSettingsString(AppConfig.PREF_AGENT_V_URI)
                         ?.takeIf(String::isNotBlank)?.let { agentVUri ->
-                        headers.putAll(
-                            AgentVConfig.read(
-                                AngApplication.application.contentResolver,
-                                agentVUri
-                            )
+                        val fileHeaders = AgentVConfig.read(
+                            AngApplication.application.contentResolver,
+                            agentVUri
                         )
+                        val merged = AgentVConfig.merge(headers, fileHeaders)
+                        headers.clear()
+                        headers.putAll(merged)
                     }
                 }
                 JsonUtil.toJson(headers)

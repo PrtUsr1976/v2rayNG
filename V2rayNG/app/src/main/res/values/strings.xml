@@ -313,12 +313,12 @@
     <string name="sub_setting_user_agent">User Agent</string>
     <string name="sub_setting_request_headers">Request Headers (JSON format)</string>
     <string name="title_subscription_settings">Subscriptions</string>
-    <string name="setting_agent_v_file">Global agent_v file</string>
-    <string name="setting_agent_v_enabled">Use agent_v</string>
+    <string name="setting_agent_v_file">Global agent_v or hwid file</string>
+    <string name="setting_agent_v_enabled">Use agent_v or hwid</string>
     <string name="setting_agent_v_enabled_summary">Apply headers from the selected file to subscription requests</string>
     <string name="setting_agent_v_not_selected">Not selected; manual request headers are used</string>
-    <string name="setting_agent_v_access_error">Unable to keep access to agent_v</string>
-    <string name="setting_agent_v_invalid">Invalid agent_v: %1$s</string>
+    <string name="setting_agent_v_access_error">Unable to keep access to the selected file</string>
+    <string name="setting_agent_v_invalid">Invalid agent_v or hwid file: %1$s</string>
     <string name="setting_vless_export_enabled">Export VLESS</string>
     <string name="setting_vless_export_enabled_summary">Export VLESS links to text files named after subscriptions</string>
     <string name="setting_vless_export_directory">VLESS export folder</string>

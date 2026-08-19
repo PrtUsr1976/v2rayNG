@@ -160,6 +160,7 @@ dependencies {
     implementation(libs.mmkv.static)
     implementation(libs.gson)
     implementation(libs.okhttp)
+    implementation("org.brotli:dec:0.1.2")
 
     // Reactive and Utility Libraries
     implementation(libs.kotlinx.coroutines.android)

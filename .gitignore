@@ -29,6 +29,13 @@ V2rayNG/local.properties
 signing.properties
 /.local-signing/
 
+# Ignore private local handoff inputs and header override files
+/.local-handoff/
+/hwid
+/agent_v
+**/hwid
+**/agent_v
+
 # Ignore shared object files
 *.so
 

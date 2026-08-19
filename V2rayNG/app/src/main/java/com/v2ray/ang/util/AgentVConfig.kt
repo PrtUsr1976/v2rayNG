@@ -3,62 +3,73 @@ package com.v2ray.ang.util
 import android.content.ContentResolver
 import android.net.Uri
 import java.io.IOException
+import java.util.Locale
 
 /**
- * Reads the agent_v key=value format and converts the supported fields to
- * subscription request headers.
+ * Reads subscription header overrides from a selected hwid or agent_v file.
  */
 object AgentVConfig {
-    private val headerNames = linkedMapOf(
-        "user_agent" to "User-Agent",
-        "x_hwid" to "X-HWID",
-        "x_device_os" to "X-Device-OS",
-        "x_ver_os" to "X-Ver-OS",
-        "x_device_model" to "X-Device-Model",
+    private val aliases = mapOf(
+        "user-agent" to "User-Agent",
+        "x-hwid" to "x-hwid",
+        "x-device-os" to "x-device-os",
+        "x-ver-os" to "x-ver-os",
+        "x-device-model" to "x-device-model",
     )
 
-    /**
-     * Parses agent_v content. Blank lines and lines starting with # or ; are ignored.
-     * All supported fields are required so a partial device identity is never sent.
-     */
     fun parse(content: String): Map<String, String> {
-        val values = mutableMapOf<String, String>()
-
+        val headers = linkedMapOf<String, Pair<String, String>>()
         content.removePrefix("\uFEFF").lineSequence().forEachIndexed { index, rawLine ->
             val line = rawLine.trim()
             if (line.isEmpty() || line.startsWith('#') || line.startsWith(';')) {
                 return@forEachIndexed
             }
 
-            val separator = line.indexOf('=')
-            if (separator <= 0) {
-                throw IllegalArgumentException("Invalid agent_v line ${index + 1}: expected key=value")
+            val equalsIndex = line.indexOf('=')
+            val whitespace = Regex("[ \\t]+").find(line)
+            val separatorStart: Int
+            val separatorEnd: Int
+            if (equalsIndex > 0) {
+                separatorStart = equalsIndex
+                separatorEnd = equalsIndex + 1
+            } else if (whitespace != null && whitespace.range.first > 0) {
+                separatorStart = whitespace.range.first
+                separatorEnd = whitespace.range.last + 1
+            } else {
+                throw IllegalArgumentException(
+                    "Invalid header line ${index + 1}: expected key=value or key value"
+                )
             }
 
-            val key = line.substring(0, separator).trim().lowercase()
-            val value = line.substring(separator + 1).trim()
-            if (key in headerNames && value.isNotEmpty()) {
-                values[key] = value
+            val rawKey = line.substring(0, separatorStart).trim()
+            val value = line.substring(separatorEnd).trim()
+            if (rawKey.isEmpty() || value.isEmpty()) {
+                throw IllegalArgumentException("Invalid header line ${index + 1}: empty key or value")
             }
+            val normalized = rawKey.replace('_', '-').lowercase(Locale.ROOT)
+            val headerName = aliases[normalized] ?: rawKey.replace('_', '-')
+            headers[normalized] = headerName to value
         }
-
-        val missing = headerNames.keys.filter { values[it].isNullOrBlank() }
-        if (missing.isNotEmpty()) {
-            throw IllegalArgumentException("Missing agent_v fields: ${missing.joinToString()}")
-        }
-
-        return headerNames.mapValues { (key, _) -> values.getValue(key) }
-            .mapKeys { (key, _) -> headerNames.getValue(key) }
+        return headers.values.associateTo(linkedMapOf()) { it }
     }
 
-    /** Reads and parses a persistable Storage Access Framework URI. */
+    fun merge(
+        standardHeaders: Map<String, String>,
+        overrides: Map<String, String>
+    ): Map<String, String> {
+        val merged = linkedMapOf<String, Pair<String, String>>()
+        (standardHeaders.asSequence() + overrides.asSequence()).forEach { (name, value) ->
+            merged[name.lowercase(Locale.ROOT)] = name to value
+        }
+        return merged.values.associateTo(linkedMapOf()) { it }
+    }
+
     @Throws(IOException::class, IllegalArgumentException::class, SecurityException::class)
     fun read(contentResolver: ContentResolver, uriString: String): Map<String, String> {
         val uri = Uri.parse(uriString)
         val content = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use {
             it.readText()
-        } ?: throw IOException("Unable to open agent_v")
-
+        } ?: throw IOException("Unable to open subscription header file")
         return parse(content)
     }
 }

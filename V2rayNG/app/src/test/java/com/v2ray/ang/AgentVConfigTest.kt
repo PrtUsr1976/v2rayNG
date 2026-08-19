@@ -3,66 +3,57 @@ package com.v2ray.ang
 import com.v2ray.ang.util.AgentVConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AgentVConfigTest {
     @Test
-    fun parsesSupportedFields() {
+    fun parsesEqualsWhitespaceTabsAliasesAndAdditionalHeaders() {
         val headers = AgentVConfig.parse(
             """
-            user_agent=Throne/1.1.4
-            x_hwid=3b4f0a66-f4c4-499c-bc32-0787ae8d5d9b
-            x_device_os=Windows
-            x_ver_os=10.0.17763
-            x_device_model=VirtualBox
+            user_agent=Happ/3.3.6/Windows/2607171516600
+            X_HWID	fake-hwid
+            x-device-os Windows
+            accept_language = ru-RU
+            X-Custom	value
             """.trimIndent()
         )
 
-        assertEquals("Throne/1.1.4", headers["User-Agent"])
-        assertEquals("3b4f0a66-f4c4-499c-bc32-0787ae8d5d9b", headers["X-HWID"])
-        assertEquals("Windows", headers["X-Device-OS"])
-        assertEquals("10.0.17763", headers["X-Ver-OS"])
-        assertEquals("VirtualBox", headers["X-Device-Model"])
+        assertEquals("Happ/3.3.6/Windows/2607171516600", headers["User-Agent"])
+        assertEquals("fake-hwid", headers["x-hwid"])
+        assertEquals("Windows", headers["x-device-os"])
+        assertEquals("ru-RU", headers["accept-language"])
+        assertEquals("value", headers["X-Custom"])
     }
 
     @Test
-    fun supportsBomWhitespaceCommentsAndEqualsInValues() {
+    fun ignoresCommentsAndUsesLastCaseInsensitiveDuplicate() {
         val headers = AgentVConfig.parse(
-            "\uFEFF # generated\n" +
-                " USER_AGENT = Throne/1.1.4=custom \n" +
+            "\uFEFF# generated\n" +
+                "user_agent=first\n" +
                 "; ignored\n" +
-                "x_hwid = id\n" +
-                "x_device_os = Windows\n" +
-                "x_ver_os = 10.0.17763\n" +
-                "x_device_model = VirtualBox\n"
+                "USER-AGENT second\n"
         )
 
-        assertEquals("Throne/1.1.4=custom", headers["User-Agent"])
+        assertEquals(1, headers.size)
+        assertEquals("second", headers["User-Agent"])
     }
 
     @Test
-    fun rejectsMissingRequiredFields() {
-        val error = assertThrows(IllegalArgumentException::class.java) {
-            AgentVConfig.parse("user_agent=Throne/1.1.4")
-        }
+    fun permitsPartialFilesAndMergesOverridesCaseInsensitively() {
+        val merged = AgentVConfig.merge(
+            linkedMapOf("User-Agent" to "standard", "Accept" to "text/plain"),
+            AgentVConfig.parse("user_agent custom\naccept application/json")
+        )
 
-        assertTrue(error.message.orEmpty().contains("x_hwid"))
+        assertEquals(2, merged.size)
+        assertEquals("custom", merged["User-Agent"])
+        assertEquals("application/json", merged["accept"])
     }
 
     @Test
     fun rejectsMalformedLines() {
         assertThrows(IllegalArgumentException::class.java) {
-            AgentVConfig.parse(
-                """
-                user_agent=Throne/1.1.4
-                malformed
-                x_hwid=id
-                x_device_os=Windows
-                x_ver_os=10
-                x_device_model=VirtualBox
-                """.trimIndent()
-            )
+            AgentVConfig.parse("malformed")
         }
     }
 }
