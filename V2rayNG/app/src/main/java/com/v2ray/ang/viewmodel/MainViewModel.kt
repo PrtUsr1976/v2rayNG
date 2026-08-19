@@ -383,6 +383,8 @@ class MainViewModel(
         launchLoading {
             withContext(ioDispatcher) {
                 try {
+                    cacheMutex.withLock { groupDataCache.remove(subId) }
+                    updateGroupUi(subId, emptyList())
                     val result = if (subId.isEmpty()) {
                         dataSource.updateConfigViaSubAll()
                     } else {
@@ -399,14 +401,15 @@ class MainViewModel(
                         else ->
                             toast(dataSource.getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
                     }
+                    setupGroupTab(forceRefresh = true).join()
                     if (result.configCount > 0) {
-                        setupGroupTab(forceRefresh = true)
                         refreshSelectedGuid()
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Subscription update failed", e)
+                    setupGroupTab(forceRefresh = true).join()
                     toastError(R.string.toast_failure)
                 }
             }
@@ -608,9 +611,19 @@ class MainViewModel(
         }
     }
 
-    fun updateSelectedGuid(guid: String) {
+    fun updateSelectedGuid(guid: String): Boolean {
+        val profile = dataSource.decodeServerConfig(guid)
+        val selectedGroupId = uiState.value.selectedGroupId
+        if (profile == null ||
+            selectedGroupId.isNotEmpty() && profile.subscriptionId != selectedGroupId
+        ) {
+            toast(R.string.toast_server_not_found_in_group)
+            reloadServerList()
+            return false
+        }
         dataSource.setSelectServer(guid)
         _uiState.update { it.copy(selectedGuid = guid) }
+        return true
     }
 
     fun refreshSelectedGuid() {

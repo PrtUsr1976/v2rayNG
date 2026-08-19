@@ -193,6 +193,51 @@ object MmkvManager {
         profileFullStorage.encode(key, configJson)
     }
 
+    internal data class SubscriptionServersSnapshot(
+        val serverList: List<String>,
+        val selectedGuid: String?,
+        val entries: Map<String, ServerStorageSnapshot>
+    )
+
+    internal data class ServerStorageSnapshot(
+        val profileJson: String,
+        val affiliationJson: String?,
+        val rawConfig: String?
+    )
+
+    internal fun createSubscriptionServersSnapshot(
+        subscriptionId: String
+    ): SubscriptionServersSnapshot {
+        val serverList = decodeServerList(subscriptionId).toList()
+        val entries = serverList.mapNotNull { guid ->
+            val profileJson = profileFullStorage.decodeString(guid) ?: return@mapNotNull null
+            guid to ServerStorageSnapshot(
+                profileJson = profileJson,
+                affiliationJson = serverAffStorage.decodeString(guid),
+                rawConfig = serverRawStorage.decodeString(guid)
+            )
+        }.toMap()
+        return SubscriptionServersSnapshot(
+            serverList = serverList,
+            selectedGuid = getSelectServer()?.takeIf(serverList::contains),
+            entries = entries
+        )
+    }
+
+    internal fun restoreSubscriptionServersSnapshot(
+        subscriptionId: String,
+        snapshot: SubscriptionServersSnapshot
+    ) {
+        removeServerViaSubid(subscriptionId)
+        snapshot.entries.forEach { (guid, entry) ->
+            profileFullStorage.encode(guid, entry.profileJson)
+            entry.affiliationJson?.let { serverAffStorage.encode(guid, it) }
+            entry.rawConfig?.let { serverRawStorage.encode(guid, it) }
+        }
+        encodeServerList(snapshot.serverList.toMutableList(), subscriptionId)
+        snapshot.selectedGuid?.let(::setSelectServer)
+    }
+
     /**
      * Removes the server configuration.
      *

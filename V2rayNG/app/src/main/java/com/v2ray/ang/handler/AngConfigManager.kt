@@ -617,7 +617,13 @@ object AngConfigManager {
                 return SubscriptionUpdateResult(failureCount = 1)
             }
 
-            val count = parseConfigViaSub(configText, it.guid, false)
+            val previousServers = MmkvManager.createSubscriptionServersSnapshot(it.guid)
+            val count = try {
+                parseConfigViaSub(configText, it.guid, false)
+            } catch (e: Exception) {
+                MmkvManager.restoreSubscriptionServersSnapshot(it.guid, previousServers)
+                throw e
+            }
             if (count > 0) {
                 it.subscription.lastUpdated = System.currentTimeMillis()
                 MmkvManager.encodeSubscription(it.guid, it.subscription)
@@ -638,6 +644,7 @@ object AngConfigManager {
                     successCount = 1
                 )
             } else {
+                MmkvManager.restoreSubscriptionServersSnapshot(it.guid, previousServers)
                 // Got response but no valid configs parsed
                 return SubscriptionUpdateResult(failureCount = 1)
             }
